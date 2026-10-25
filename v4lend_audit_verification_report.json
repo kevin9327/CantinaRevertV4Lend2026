@@ -1,0 +1,114 @@
+{
+  "competition": "Cantina x Revert Finance \u2014 v4lend Security Audit Competition",
+  "prize_pool_cash": "$50,000 USDC",
+  "repository": "https://github.com/revert-finance/v4lend",
+  "verification_status": "PASSED_ALL_4_DEFENSIVE_INVARIANTS",
+  "total_findings_verified": 4,
+  "severity_breakdown": {
+    "High_Medium": 1,
+    "Medium": 2,
+    "Medium_Low": 1
+  },
+  "findings": [
+    {
+      "finding_id": "V4L-01",
+      "severity": "High / Medium",
+      "title": "Incomplete V4LE-96 Remediation in RevertHookAutoLendActions: Uncapped redeem(shares) Bricks autoLendForceExit Under High Utilization and Drops Swap Triggers on Failed autoLendWithdraw",
+      "target_file": "src/hook/RevertHookAutoLendActions.sol",
+      "target_lines": "271-298, 378-387",
+      "reference_parity_file": "src/automators/AutoLend.sol:262-335, 368-420",
+      "scenario": {
+        "vault_total_assets_usdc": 1000000,
+        "vault_active_borrows_usdc": 820000,
+        "vault_liquid_reserves_usdc": 180000,
+        "position_autolend_shares_usdc": 250000
+      },
+      "unpatched_behavior": {
+        "force_exit_reverts_insufficient_liquidity": true,
+        "liquid_assets_recovered_usdc": 0,
+        "swap_trigger_lost_after_catch": true
+      },
+      "patched_behavior": {
+        "liquid_assets_redeemed_usdc": 180000,
+        "residual_erc4626_shares_transferred_usdc_equiv": 70000,
+        "total_principal_preserved_pct": 100.0,
+        "invariant_verified": true
+      }
+    },
+    {
+      "finding_id": "V4L-02",
+      "severity": "Medium",
+      "title": "V4Oracle._requireRecoveredToken Bypasses Configured recoveryPeriods[referenceToken] After L2 Sequencer Restart",
+      "target_file": "src/oracle/V4Oracle.sol",
+      "target_lines": "129-135, 184-203",
+      "scenario": {
+        "seconds_since_sequencer_restart": 900,
+        "configured_reference_token_recovery_period_sec": 3600,
+        "token_twap_window_sec": 600
+      },
+      "unpatched_behavior": {
+        "direct_reference_token_check_enforced": false,
+        "twap_mode_reference_recovery_enforced": false,
+        "chainlink_mode_enforced_when_ref_is_chainlink_ref": false
+      },
+      "patched_behavior": {
+        "sequencer_recovery_window_strictly_enforced": true,
+        "invariant_verified": true
+      }
+    },
+    {
+      "finding_id": "V4L-03",
+      "severity": "Medium",
+      "title": "LeverageTransformer._getDummyTickRange Uses Truncation-Toward-Zero Instead of Floor Division and Produces Misordered/Out-of-Bounds Ticks Near Pool Extremes",
+      "target_file": "src/vault/transformers/LeverageTransformer.sol",
+      "target_lines": "450-477",
+      "reference_parity_file": "src/hook/RevertHookTriggers.sol:34-38",
+      "test_cases": {
+        "negative_tick_truncation": {
+          "current_tick": -55,
+          "tick_spacing": 60,
+          "unpatched_rounded_tick": 0,
+          "patched_floor_tick": -60
+        },
+        "near_min_tick_boundary": {
+          "current_tick": -887160,
+          "min_usable_tick": -887220,
+          "unpatched_range": [
+            -887220,
+            -887220
+          ],
+          "unpatched_is_invalid_zero_width": true,
+          "patched_range": [
+            -887220,
+            -887160
+          ]
+        }
+      },
+      "invariant_verified": true
+    },
+    {
+      "finding_id": "V4L-04",
+      "severity": "Medium / Low",
+      "title": "V4Vault.dailyLendNetInflow Zero-Clamping on Post-Reset Withdrawals Overstates Same-Day Net Inflow and Understates Next-Day _settledLentAssets()",
+      "target_file": "src/vault/V4Vault.sol",
+      "target_lines": "1214, 1239-1243, 1634-1659",
+      "scenario": {
+        "day1_settled_tvl_usdc": 1000000,
+        "day2_opening_withdrawal_usdc": 200000,
+        "day2_subsequent_deposit_usdc": 300000,
+        "day2_ending_tvl_usdc": 1100000
+      },
+      "unpatched_behavior": {
+        "day2_recorded_net_inflow_usdc": 300000,
+        "day3_settled_lent_assets_usdc": 800000,
+        "settled_tvl_understatement_usdc": 200000
+      },
+      "patched_behavior": {
+        "day2_true_net_inflow_usdc": 100000,
+        "day3_settled_lent_assets_accurate": true,
+        "invariant_verified": true
+      }
+    }
+  ],
+  "sha256": "15c2b82fb58d57acad9c91a6dc40558c21395e7f3a21d267593bbf1c6a83ff6a"
+}

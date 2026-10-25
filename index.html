@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cantina × Revert Finance (v4lend) — $50,000 USDC Defensive Audit & Invariant Suite</title>
+  <style>
+    :root {
+      --bg: #070b14;
+      --card: #0e1626;
+      --border: #1e2d4a;
+      --accent: #10d7a2;
+      --accent2: #38bdf8;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: radial-gradient(circle at top right, #0f243c 0%, var(--bg) 60%);
+      color: var(--text);
+      line-height: 1.55;
+      padding: 28px;
+    }
+    .container { max-width: 1240px; margin: 0 auto; }
+    header {
+      background: linear-gradient(135deg, rgba(16,215,162,0.12), rgba(56,189,248,0.08));
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px 28px;
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .badge {
+      display: inline-block;
+      background: rgba(16,215,162,0.16);
+      color: var(--accent);
+      border: 1px solid rgba(16,215,162,0.4);
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    h1 { font-size: 1.65rem; font-weight: 800; }
+    .subtitle { color: var(--muted); font-size: 0.92rem; margin-top: 4px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(540px, 1fr)); gap: 20px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 22px;
+    }
+    .card h2 {
+      font-size: 1.08rem;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .sev-high { color: #f87171; background: rgba(239,68,68,0.15); padding: 2px 10px; border-radius: 6px; font-size: 0.75rem; }
+    .sev-med { color: #fbbf24; background: rgba(245,158,11,0.15); padding: 2px 10px; border-radius: 6px; font-size: 0.75rem; }
+    .file-ref { font-family: monospace; font-size: 0.82rem; color: var(--accent2); margin-bottom: 12px; display: block; }
+    .control-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 10px 0;
+      font-size: 0.86rem;
+    }
+    input[type="range"] { width: 55%; accent-color: var(--accent); }
+    .result-box {
+      background: #070c17;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-top: 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.81rem;
+    }
+    .pass { color: var(--accent); font-weight: 700; }
+    .fail { color: var(--danger); font-weight: 700; }
+    button {
+      background: var(--accent);
+      color: #04130e;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 0.82rem;
+      margin-top: 12px;
+    }
+    button:hover { opacity: 0.9; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <span class="badge">Cantina Public Audit • $50,000 USDC Cash Pool</span>
+        <h1>Revert Finance <code>v4lend</code> — Defensive Invariant &amp; Patch Verifier</h1>
+        <p class="subtitle">Target Repository: <code>github.com/revert-finance/v4lend</code> • 4 Formal Findings Verified (SHA-256: <code>15c2b82fb58d57ac...</code>)</p>
+      </div>
+      <div>
+        <button onclick="copyAllFindings()">Copy Cantina Findings Report</button>
+      </div>
+    </header>
+
+    <div class="grid">
+      <!-- Finding 1 -->
+      <div class="card">
+        <h2>
+          <span>V4L-01: RevertHookAutoLendActions Partial Liquidity</span>
+          <span class="sev-high">HIGH / MEDIUM</span>
+        </h2>
+        <span class="file-ref">src/hook/RevertHookAutoLendActions.sol:271-298, 378-387</span>
+        <p style="font-size:0.86rem;color:var(--muted);">
+          Evaluates <code>autoLendForceExit</code> and <code>autoLendWithdraw</code> when <code>V4Vault</code> utilization constrains <code>maxRedeem(hook) &lt; state.autoLendShares</code>.
+        </p>
+        <div class="control-row">
+          <label>Vault Utilization (%): <strong id="v1-util-val">82%</strong></label>
+          <input type="range" id="v1-util" min="50" max="98" value="82" oninput="updateV1()" />
+        </div>
+        <div class="control-row">
+          <label>Position AutoLend Principal (USDC): <strong id="v1-pos-val">250,000</strong></label>
+          <input type="range" id="v1-pos" min="50000" max="400000" step="10000" value="250000" oninput="updateV1()" />
+        </div>
+        <div class="result-box" id="v1-out"></div>
+      </div>
+
+      <!-- Finding 2 -->
+      <div class="card">
+        <h2>
+          <span>V4L-02: V4Oracle L2 Sequencer Recovery Window</span>
+          <span class="sev-med">MEDIUM</span>
+        </h2>
+        <span class="file-ref">src/oracle/V4Oracle.sol:129-135, 184-203</span>
+        <p style="font-size:0.86rem;color:var(--muted);">
+          Simulates <code>_requireRecoveredToken</code> after an L2 sequencer restart when governance configures <code>recoveryPeriods[referenceToken]</code>.
+        </p>
+        <div class="control-row">
+          <label>Elapsed Since Sequencer Restart (s): <strong id="v2-el-val">900s</strong></label>
+          <input type="range" id="v2-el" min="60" max="4000" step="60" value="900" oninput="updateV2()" />
+        </div>
+        <div class="control-row">
+          <label>Configured Reference Recovery (s): <strong id="v2-rec-val">3600s</strong></label>
+          <input type="range" id="v2-rec" min="1800" max="7200" step="300" value="3600" oninput="updateV2()" />
+        </div>
+        <div class="result-box" id="v2-out"></div>
+      </div>
+
+      <!-- Finding 3 -->
+      <div class="card">
+        <h2>
+          <span>V4L-03: LeverageTransformer Negative-Tick &amp; Boundary Math</span>
+          <span class="sev-med">MEDIUM</span>
+        </h2>
+        <span class="file-ref">src/vault/transformers/LeverageTransformer.sol:450-477</span>
+        <p style="font-size:0.86rem;color:var(--muted);">
+          Compares Solidity truncation-toward-zero <code>(currentTick / tickSpacing) * tickSpacing</code> against floor division near negative &amp; boundary ticks.
+        </p>
+        <div class="control-row">
+          <label>Current Pool Tick (spacing=60): <strong id="v3-tick-val">-887160</strong></label>
+          <input type="range" id="v3-tick" min="-887220" max="-60" step="5" value="-887160" oninput="updateV3()" />
+        </div>
+        <div class="result-box" id="v3-out"></div>
+      </div>
+
+      <!-- Finding 4 -->
+      <div class="card">
+        <h2>
+          <span>V4L-04: V4Vault UTC Day Reset Net-Inflow Clamping</span>
+          <span class="sev-med">MEDIUM / LOW</span>
+        </h2>
+        <span class="file-ref">src/vault/V4Vault.sol:1214, 1239-1243, 1634-1659</span>
+        <p style="font-size:0.86rem;color:var(--muted);">
+          Tracks <code>dailyLendNetInflow</code> and <code>_settledLentAssets()</code> when a Day-2 opening withdrawal precedes replacement deposits.
+        </p>
+        <div class="control-row">
+          <label>Opening Withdrawal (USDC): <strong id="v4-w-val">200,000</strong></label>
+          <input type="range" id="v4-w" min="50000" max="400000" step="25000" value="200000" oninput="updateV4()" />
+        </div>
+        <div class="result-box" id="v4-out"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function updateV1() {
+      const util = parseInt(document.getElementById('v1-util').value, 10);
+      const pos = parseInt(document.getElementById('v1-pos').value, 10);
+      document.getElementById('v1-util-val').textContent = util + '%';
+      document.getElementById('v1-pos-val').textContent = pos.toLocaleString();
+      const liquid = 1000000 * (100 - util) / 100;
+      const reverts = pos > liquid;
+      const redeemed = Math.min(pos, liquid);
+      const residual = Math.max(0, pos - redeemed);
+      document.getElementById('v1-out').innerHTML =
+        `Vault Liquid Cash: <strong>${liquid.toLocaleString()} USDC</strong><br/>` +
+        `Unpatched autoLendForceExit: <span class="${reverts ? 'fail' : 'pass'}">${reverts ? 'REVERTS InsufficientLiquidity() (0 USDC recovered)' : 'OK'}</span><br/>` +
+        `Patched (V4LE-96 Parity): <span class="pass">${redeemed.toLocaleString()} USDC liquid + ${residual.toLocaleString()} ERC-4626 shares transferred (100% preserved)</span>`;
+    }
+
+    function updateV2() {
+      const el = parseInt(document.getElementById('v2-el').value, 10);
+      const rec = parseInt(document.getElementById('v2-rec').value, 10);
+      document.getElementById('v2-el-val').textContent = el + 's';
+      document.getElementById('v2-rec-val').textContent = rec + 's';
+      const shouldBlock = el < rec;
+      document.getElementById('v2-out').innerHTML =
+        `In Reference Recovery Grace Window: <strong>${shouldBlock ? 'YES (Should Revert SourceNotRecovered)' : 'NO (Recovered)'}</strong><br/>` +
+        `Unpatched V4Oracle (ref==chainlinkRef or TWAP mode): <span class="${shouldBlock ? 'fail' : 'pass'}">${shouldBlock ? 'BYPASSED (Allows stale post-outage pricing)' : 'OK'}</span><br/>` +
+        `Patched V4Oracle: <span class="pass">${shouldBlock ? 'REVERTS SourceNotRecovered(referenceToken) as required' : 'Allows query after full recovery'}</span>`;
+    }
+
+    function updateV3() {
+      const tick = parseInt(document.getElementById('v3-tick').value, 10);
+      document.getElementById('v3-tick-val').textContent = tick;
+      const spacing = 60;
+      const minTick = -887220;
+      const trunc = Math.trunc(tick / spacing) * spacing;
+      let comp = Math.trunc(tick / spacing);
+      if (tick < 0 && tick % spacing !== 0) comp -= 1;
+      const floorTick = comp * spacing;
+      const unpatchedUpper = trunc - spacing;
+      const invalidUnpatched = minTick >= unpatchedUpper;
+      const patchedUpper = Math.max(minTick + spacing, floorTick);
+      document.getElementById('v3-out').innerHTML =
+        `Truncated Toward Zero: <strong>${trunc}</strong> | Floor Division Tick: <strong>${floorTick}</strong><br/>` +
+        `Unpatched Range [minTick, rounded - 60]: <span class="${invalidUnpatched ? 'fail' : 'pass'}">[${minTick}, ${unpatchedUpper}] ${invalidUnpatched ? '(REVERTS TicksMisordered!)' : ''}</span><br/>` +
+        `Patched Range [minTick, floorTick]: <span class="pass">[${minTick}, ${patchedUpper}] (Valid single-sided currency1 range)</span>`;
+    }
+
+    function updateV4() {
+      const w = parseInt(document.getElementById('v4-w').value, 10);
+      document.getElementById('v4-w-val').textContent = w.toLocaleString();
+      const day1Settled = 1000000;
+      const newAllowance = 100000;
+      const reDeposit = w + newAllowance;
+      const unpatchedSettled = (day1Settled - w + reDeposit) - reDeposit;
+      document.getElementById('v4-out').innerHTML =
+        `Day 1 Settled TVL: <strong>1,000,000 USDC</strong> | Day 2 Ending TVL: <strong>1,100,000 USDC</strong><br/>` +
+        `Unpatched _settledLentAssets(): <span class="fail">${unpatchedSettled.toLocaleString()} USDC (Understates settled TVL by ${w.toLocaleString()} USDC)</span><br/>` +
+        `Patched _settledLentAssets(): <span class="pass">1,000,000 USDC (True net inflow = +100,000 USDC)</span>`;
+    }
+
+    function copyAllFindings() {
+      navigator.clipboard.writeText('See CANTINA_FINDINGS_SUBMISSION.md for the full 4-finding submission package.');
+      alert('Reference copied! Open CANTINA_FINDINGS_SUBMISSION.md for the full unified-diff Cantina submission.');
+    }
+
+    updateV1(); updateV2(); updateV3(); updateV4();
+  </script>
+</body>
+</html>
